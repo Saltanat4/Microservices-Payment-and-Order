@@ -2,24 +2,29 @@ package app
 
 import (
 	"AP2_assignment1/service/internal/order/repository"
-	"AP2_assignment1/service/internal/order/transport/http"
+	grpcserver "AP2_assignment1/service/internal/order/transport/grpc"
+	httphandler "AP2_assignment1/service/internal/order/transport/http"
 	"AP2_assignment1/service/internal/order/usecase"
 	"database/sql"
 )
 
 type OrderApp struct {
-	Handler *http.OrderHandler
+	Handler     *httphandler.OrderHandler
+	UseCase     *usecase.OrderUsecase
+	GRPCHandler *grpcserver.OrderGRPCHandler
 }
 
 func NewOrderApp(db *sql.DB, cfg *Config) *OrderApp {
 	repo := repository.NewOrderRepo(db)
-	payClient := http.NewPaymentClient(cfg.PaymentService)
+	payClient := httphandler.NewPaymentGRPCClient(cfg.PaymentGRPCAddress)
 
 	uc := usecase.NewOrderUsecase(repo, payClient)
-
-	handler := http.NewOrderHandler(uc)
+	handler := httphandler.NewOrderHandler(uc)
+	grpcHandler := grpcserver.NewOrderGRPCHandler(repo)
 
 	return &OrderApp{
-		Handler: handler,
+		Handler:     handler,
+		UseCase:     uc,
+		GRPCHandler: grpcHandler,
 	}
 }

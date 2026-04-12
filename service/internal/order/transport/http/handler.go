@@ -30,9 +30,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	}
 
 	order, err := h.uc.CreateOrder(req.CustomerID, req.ItemName, req.Amount)
-
 	if err != nil {
-		if err.Error() == "payment service unavailable" {
+		if strings.Contains(err.Error(), "payment_service_unavailable") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Payment service is down"})
 			return
 		}
@@ -44,7 +43,6 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetOrder(c *gin.Context) {
-
 	id := c.Param("id")
 	order, err := h.uc.GetOrder(id)
 	if err != nil {
@@ -56,12 +54,16 @@ func (h *OrderHandler) GetOrder(c *gin.Context) {
 
 func (h *OrderHandler) CancelOrder(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.uc.CancelOrder(id); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+	err := h.uc.CancelOrder(id)
+	if err != nil {
+		if err.Error() == "cannot cancel order in Paid status" {
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Order cancelled successfully"})
-
 }
 
 func (h *OrderHandler) GetOrders(c *gin.Context) {
@@ -79,7 +81,6 @@ func (h *OrderHandler) GetOrders(c *gin.Context) {
 	}
 
 	orders, err := h.uc.GetOrdersByRange(minVal, maxVal)
-
 	if err != nil {
 		if strings.Contains(err.Error(), "bad_request") {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

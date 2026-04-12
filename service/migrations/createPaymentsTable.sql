@@ -1,7 +1,7 @@
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
-    order_id VARCHAR(255) NOT NULL,
+    order_id VARCHAR(36) NOT NULL,
     amount BIGINT NOT NULL,
     status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+    transaction_id VARCHAR(36) NOT NULL
+    );

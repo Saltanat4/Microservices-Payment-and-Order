@@ -3,6 +3,7 @@ package repository
 import (
 	"AP2_assignment1/service/internal/order/domain"
 	"database/sql"
+	"time"
 )
 
 type OrderRepo struct {
@@ -14,7 +15,7 @@ func NewOrderRepo(db *sql.DB) *OrderRepo {
 }
 
 func (r *OrderRepo) Create(o *domain.Order) error {
-	query := `INSERT INTO orders (id, customer_id, item_name, amount, status, created_at) 
+	query := `INSERT INTO orders (id, customer_id, item_name, amount, status, created_at)
               VALUES ($1, $2, $3, $4, $5, $6)`
 	_, err := r.db.Exec(query, o.ID, o.CustomerID, o.ItemName, o.Amount, o.Status, o.CreatedAt)
 	return err
@@ -22,7 +23,7 @@ func (r *OrderRepo) Create(o *domain.Order) error {
 
 func (r *OrderRepo) GetByID(id string) (*domain.Order, error) {
 	o := &domain.Order{}
-	query := `SELECT id, customer_id, item_name, amount, status, created_at 
+	query := `SELECT id, customer_id, item_name, amount, status, created_at
               FROM orders WHERE id = $1`
 	err := r.db.QueryRow(query, id).Scan(&o.ID, &o.CustomerID, &o.ItemName, &o.Amount, &o.Status, &o.CreatedAt)
 	if err != nil {
@@ -38,8 +39,8 @@ func (r *OrderRepo) UpdateStatus(id string, status string) error {
 }
 
 func (r *OrderRepo) GetByAmountRange(min, max int64) ([]*domain.Order, error) {
-	query := `SELECT id, customer_id, item_name, amount, status, created_at 
-              FROM orders 
+	query := `SELECT id, customer_id, item_name, amount, status, created_at
+              FROM orders
               WHERE amount >= $1 AND amount <= $2`
 
 	rows, err := r.db.Query(query, min, max)
@@ -58,4 +59,26 @@ func (r *OrderRepo) GetByAmountRange(min, max int64) ([]*domain.Order, error) {
 		orders = append(orders, o)
 	}
 	return orders, nil
+}
+
+func (r *OrderRepo) WatchStatusChange(id string, lastStatus string, done <-chan struct{}) (string, error) {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			return "", nil
+		case <-ticker.C:
+			var currentStatus string
+			query := `SELECT status FROM orders WHERE id = $1`
+			err := r.db.QueryRow(query, id).Scan(&currentStatus)
+			if err != nil {
+				return "", err
+			}
+			if currentStatus != lastStatus {
+				return currentStatus, nil
+			}
+		}
+	}
 }

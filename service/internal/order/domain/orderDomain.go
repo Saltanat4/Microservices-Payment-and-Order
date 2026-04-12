@@ -20,6 +20,7 @@ type OrderRepository interface {
 	GetByID(id string) (*Order, error)
 	UpdateStatus(id string, status string) error
 	GetByAmountRange(min, max int64) ([]*Order, error)
+	WatchStatusChange(id string, lastStatus string, done <-chan struct{}) (string, error)
 }
 
 type PaymentClient interface {

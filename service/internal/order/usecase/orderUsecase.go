@@ -9,10 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type PaymentProvider interface {
-	Pay(orderID string, amount int64) (string, error)
-}
-
 type OrderUsecase struct {
 	repo      *repository.OrderRepo
 	payClient domain.PaymentClient
@@ -26,6 +22,7 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 	if amount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
+
 	order := &domain.Order{
 		ID:         uuid.New().String(),
 		CustomerID: customerID,
@@ -41,12 +38,11 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 	}
 
 	payStatus, err := uc.payClient.Pay(order.ID, order.Amount)
-
 	if err != nil {
 		return nil, errors.New("payment_service_unavailable")
 	}
 
-	if payStatus != "Completed" {
+	if payStatus == "Declined" {
 		uc.repo.UpdateStatus(order.ID, "Failed")
 		order.Status = "Failed"
 		return order, nil
@@ -59,7 +55,6 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 }
 
 func (uc *OrderUsecase) GetOrder(id string) (*domain.Order, error) {
-
 	return uc.repo.GetByID(id)
 }
 
@@ -81,10 +76,5 @@ func (uc *OrderUsecase) GetOrdersByRange(min, max int64) ([]*domain.Order, error
 		return nil, errors.New("bad_request: invalid range")
 	}
 
-	orders, err := uc.repo.GetByAmountRange(min, max)
-	if err != nil {
-		return nil, err
-	}
-
-	return orders, nil
+	return uc.repo.GetByAmountRange(min, max)
 }

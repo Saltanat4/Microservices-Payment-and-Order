@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	Port           string
-	DBConn         string
-	PaymentService string
+	HTTPPort           string
+	GRPCPort           string
+	DBConn             string
+	PaymentGRPCAddress string
 }
 
 func NewConfig() *Config {
@@ -22,16 +23,34 @@ func NewConfig() *Config {
 	host := strings.TrimSpace(os.Getenv("DB_HOST"))
 	port := strings.TrimSpace(os.Getenv("DB_PORT"))
 	name := strings.TrimSpace(os.Getenv("DB_NAME_ORDER"))
+
 	host = "localhost"
+
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, pass, name)
 
-	fmt.Printf("DEBUG ORDER DSN: '%s'\n", dsn)
+	httpPort := strings.TrimSpace(os.Getenv("ORDER_HTTP_PORT"))
+	if httpPort == "" {
+		httpPort = "8081"
+	}
 
-	fmt.Println(host + " 1 " + port + " 2 " + user + " 3 " + pass + " 4 " + name)
+	grpcPort := strings.TrimSpace(os.Getenv("ORDER_GRPC_PORT"))
+	if grpcPort == "" {
+		grpcPort = "50052"
+	}
+
+	paymentAddr := strings.TrimSpace(os.Getenv("PAYMENT_GRPC_ADDRESS"))
+	if paymentAddr == "" {
+		paymentAddr = "localhost:50051"
+	}
+
+	fmt.Printf("DEBUG ORDER DSN: '%s'\n", dsn)
+	fmt.Printf("DEBUG PAYMENT_GRPC_ADDRESS: '%s'\n", paymentAddr)
+
 	return &Config{
-		Port:           "8081",
-		PaymentService: "http://localhost:8080",
-		DBConn:         dsn,
+		HTTPPort:           httpPort,
+		GRPCPort:           grpcPort,
+		DBConn:             dsn,
+		PaymentGRPCAddress: paymentAddr,
 	}
 }
