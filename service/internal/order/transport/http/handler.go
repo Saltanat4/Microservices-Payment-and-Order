@@ -31,7 +31,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 
 	order, err := h.uc.CreateOrder(req.CustomerID, req.ItemName, req.Amount)
 	if err != nil {
-		if strings.Contains(err.Error(), "payment_service_unavailable") {
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "connection confused") {
 			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Payment service is down"})
 			return
 		}
