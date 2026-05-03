@@ -11,12 +11,6 @@
 
 ---
 
-## System Architecture
-
-The following diagram represents the final event-driven flow, showcasing both synchronous gRPC calls and asynchronous RabbitMQ event
-
----
-
 # Microservices Platform: Order, Payment & Notification
 
 This repository documents the evolution of a high-performance microservices-based platform, transitioning from simple REST communication to a robust, event-driven architecture using **gRPC** and **RabbitMQ**.
@@ -91,10 +85,12 @@ PAYMENT_GRPC_ADDRESS=localhost:50051
 RABBITMQ_URL=amqp://guest:guest@localhost:5672/
 
 ```
-### Architecture Diagram:
+---
+# SYSTEM Architecture
 ![Diagram_A3.png](Diagram_A3.png)
 
-### Results:
+--- 
+# Results
 * **Post_Orders:** ![POST_Orders.png](POST_Orders.png)
 
 * **Post_Orders (Amount Logic):**![POST_Orders_Amount_Logic.png](POST_Orders_Amount_Logic.png)
