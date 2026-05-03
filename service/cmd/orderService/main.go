@@ -3,6 +3,7 @@ package main
 import (
 	"AP2_assignment1/service/internal/order/app"
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 
@@ -19,7 +20,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close db: %v", err)
+		}
+	}(db)
 
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
@@ -30,6 +35,7 @@ func main() {
 	go func() {
 		lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 		if err != nil {
+
 			log.Fatalf("failed to listen on gRPC port %s: %v", cfg.GRPCPort, err)
 		}
 
@@ -42,10 +48,11 @@ func main() {
 		}
 	}()
 
+	fmt.Println("ORDER SERVICE STARTED")
 	r := gin.Default()
 	r.POST("/orders", orderApp.Handler.CreateOrder)
 	r.GET("/orders/:id", orderApp.Handler.GetOrder)
-	r.PUT("/orders/:id/cancel", orderApp.Handler.CancelOrder)
+	r.PATCH("/orders/:id/cancel", orderApp.Handler.CancelOrder)
 	r.GET("/orders", orderApp.Handler.GetOrders)
 
 	log.Printf("Order HTTP Server starting on :%s", cfg.HTTPPort)

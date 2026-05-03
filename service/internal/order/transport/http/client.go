@@ -29,13 +29,14 @@ func NewPaymentGRPCClient(address string) domain.PaymentClient {
 	}
 }
 
-func (c *PaymentGRPCClient) Authorize(orderID string, amount int64) (string, error) {
+func (c *PaymentGRPCClient) Authorize(orderID string, amount int64, email string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	resp, err := c.client.ProcessPayment(ctx, &pb.PaymentRequest{
-		OrderId: orderID,
-		Amount:  amount,
+		OrderId:       orderID,
+		Amount:        amount,
+		CustomerEmail: email,
 	})
 	if err != nil {
 		return "", fmt.Errorf("payment service unavailable: %v", err)
@@ -48,10 +49,10 @@ func (c *PaymentGRPCClient) Authorize(orderID string, amount int64) (string, err
 	return resp.TransactionId, nil
 }
 
-func (c *PaymentGRPCClient) Pay(orderID string, amount int64) (string, error) {
-	tid, err := c.Authorize(orderID, amount)
+func (c *PaymentGRPCClient) Pay(orderID string, amount int64, email string) (string, error) {
+	tid, err := c.Authorize(orderID, amount, email)
 	if err != nil {
-		return "Declined", nil
+		return " ", nil
 	}
 	return tid, nil
 }

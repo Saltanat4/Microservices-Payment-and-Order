@@ -1,6 +1,7 @@
 package main
 
 import (
+	"AP2_assignment1/service/internal/order/transport/grpc"
 	"AP2_assignment1/service/internal/payment/app"
 	grpchandler "AP2_assignment1/service/internal/payment/transport/grpc"
 	"database/sql"
@@ -10,7 +11,8 @@ import (
 	pb "github.com/Saltanat4/gen-repo/payment"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
-	"google.golang.org/grpc"
+	grpcpkg "google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -20,13 +22,17 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close db: %v", err)
+		}
+	}(db)
 
 	if err := db.Ping(); err != nil {
 		log.Fatalf("failed to ping database: %v", err)
 	}
 
-	paymentApp := app.NewPaymentApp(db)
+	paymentApp := app.NewPaymentApp(db, cfg)
 
 	go func() {
 		lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
@@ -34,9 +40,14 @@ func main() {
 			log.Fatalf("failed to listen on gRPC port %s: %v", cfg.GRPCPort, err)
 		}
 
-		s := grpc.NewServer()
+		s := grpcpkg.NewServer(
+			grpcpkg.UnaryInterceptor(grpc.LoggingInterceptor),
+		)
+
 		grpcHandler := grpchandler.NewPaymentGRPCHandler(paymentApp.UseCase)
 		pb.RegisterPaymentServiceServer(s, grpcHandler)
+		reflection.Register(s)
+		s.Serve(lis)
 
 		log.Printf("Payment gRPC Server starting on :%s", cfg.GRPCPort)
 		if err := s.Serve(lis); err != nil {

@@ -57,7 +57,6 @@ func (h *OrderGRPCHandler) SubscribeToOrderUpdates(req *pb.OrderRequest, stream 
 
 		newStatus, err := h.repo.WatchStatusChange(orderID, lastStatus, done)
 		if err != nil {
-			// Check if context was cancelled (client disconnected)
 			if stream.Context().Err() != nil {
 				log.Printf("Client disconnected from order %s stream", orderID)
 				return nil

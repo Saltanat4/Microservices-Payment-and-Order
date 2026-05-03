@@ -18,18 +18,19 @@ func NewOrderUsecase(repo *repository.OrderRepo, payClient domain.PaymentClient)
 	return &OrderUsecase{repo: repo, payClient: payClient}
 }
 
-func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (*domain.Order, error) {
+func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64, customer_email string) (*domain.Order, error) {
 	if amount <= 0 {
 		return nil, errors.New("amount must be positive")
 	}
 
 	order := &domain.Order{
-		ID:         uuid.New().String(),
-		CustomerID: customerID,
-		ItemName:   itemName,
-		Amount:     amount,
-		Status:     "Pending",
-		CreatedAt:  time.Now(),
+		ID:            uuid.New().String(),
+		CustomerID:    customerID,
+		CustomerEmail: customer_email,
+		ItemName:      itemName,
+		Amount:        amount,
+		Status:        "Pending",
+		CreatedAt:     time.Now(),
 	}
 
 	err := uc.repo.Create(order)
@@ -37,9 +38,15 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 		return nil, err
 	}
 
-	payStatus, err := uc.payClient.Pay(order.ID, order.Amount)
-	if err != nil {
-		return nil, errors.New("payment_service_unavailable")
+	payStatus, err := uc.payClient.Pay(order.ID, order.Amount, order.CustomerEmail)
+
+	if err != nil || payStatus == "" {
+		err := uc.repo.UpdateStatus(order.ID, "Failed")
+		if err != nil {
+			return nil, err
+		}
+		order.Status = "Failed"
+		return order, nil
 	}
 
 	if payStatus == "Declined" {
@@ -50,7 +57,6 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64) (
 
 	uc.repo.UpdateStatus(order.ID, "Paid")
 	order.Status = "Paid"
-
 	return order, nil
 }
 

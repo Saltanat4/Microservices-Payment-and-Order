@@ -4,7 +4,6 @@ import (
 	"AP2_assignment1/service/internal/order/domain"
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	pb "github.com/Saltanat4/gen-repo/payment"
@@ -20,7 +19,10 @@ type PaymentGRPCClient struct {
 func NewPaymentGRPCClient(address string) domain.PaymentClient {
 	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Printf("WARNING: could not connect to payment gRPC at %s: %v", address, err)
+		return &PaymentGRPCClient{
+			conn:   nil,
+			client: nil,
+		}
 	}
 
 	return &PaymentGRPCClient{
@@ -29,29 +31,27 @@ func NewPaymentGRPCClient(address string) domain.PaymentClient {
 	}
 }
 
-func (c *PaymentGRPCClient) Authorize(orderID string, amount int64) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func (c *PaymentGRPCClient) Authorize(orderID string, amount int64, email string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	resp, err := c.client.ProcessPayment(ctx, &pb.PaymentRequest{
-		OrderId: orderID,
-		Amount:  amount,
+		OrderId:       orderID,
+		Amount:        amount,
+		CustomerEmail: email,
 	})
-	if err != nil {
-		return "", fmt.Errorf("payment service unavailable: %v", err)
-	}
 
-	if resp.Status == "Declined" {
-		return "", fmt.Errorf("payment declined")
+	if err != nil {
+		return "", err
 	}
 
 	return resp.TransactionId, nil
 }
 
-func (c *PaymentGRPCClient) Pay(orderID string, amount int64) (string, error) {
-	tid, err := c.Authorize(orderID, amount)
-	if err != nil {
-		return "Declined", nil
+func (c *PaymentGRPCClient) Pay(orderID string, amount int64, email string) (string, error) {
+	if c.client == nil {
+		return "", fmt.Errorf("payment service unavailable")
 	}
-	return tid, nil
+
+	return c.Authorize(orderID, amount, email)
 }

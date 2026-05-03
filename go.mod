@@ -3,11 +3,12 @@ module AP2_assignment1
 go 1.25.0
 
 require (
-	github.com/Saltanat4/gen-repo v0.0.0-20260411200208-5515cdd022be
+	github.com/Saltanat4/gen-repo v0.0.0-20260503071059-62fd41b34727
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.1
+	github.com/rabbitmq/amqp091-go v1.11.0
 	google.golang.org/grpc v1.80.0
 	google.golang.org/protobuf v1.36.11
 )
