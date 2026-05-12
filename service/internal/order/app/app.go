@@ -6,6 +6,7 @@ import (
 	httphandler "AP2_assignment1/service/internal/order/transport/http"
 	"AP2_assignment1/service/internal/order/usecase"
 	"database/sql"
+	"log"
 )
 
 type OrderApp struct {
@@ -15,12 +16,16 @@ type OrderApp struct {
 }
 
 func NewOrderApp(db *sql.DB, cfg *Config) *OrderApp {
+
+	repository.InitRedis(cfg.RedisAddr)
+	log.Println("Redis initialized!")
+
 	repo := repository.NewOrderRepo(db)
 	payClient := httphandler.NewPaymentGRPCClient(cfg.PaymentGRPCAddress)
 
 	uc := usecase.NewOrderUsecase(repo, payClient)
 	handler := httphandler.NewOrderHandler(uc)
-	grpcHandler := grpcserver.NewOrderGRPCHandler(repo)
+	grpcHandler := grpcserver.NewOrderGRPCHandler(uc, repo)
 
 	return &OrderApp{
 		Handler:     handler,

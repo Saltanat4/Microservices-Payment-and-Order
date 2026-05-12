@@ -2,6 +2,7 @@ package repository
 
 import (
 	"AP2_assignment1/service/internal/order/domain"
+	"context"
 	"database/sql"
 	"time"
 )
@@ -47,11 +48,17 @@ func (r *OrderRepo) GetByID(id string) (*domain.Order, error) {
 }
 
 func (r *OrderRepo) UpdateStatus(id string, status string) error {
-	query := `UPDATE orders SET status = $1 WHERE id = $2`
-	_, err := r.db.Exec(query, status, id)
-	return err
-}
 
+	_, err := r.db.Exec("UPDATE orders SET status=$1 WHERE id=$2", status, id)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	RDB.Del(ctx, "order:"+id)
+
+	return nil
+}
 func (r *OrderRepo) GetByAmountRange(min, max int64) ([]*domain.Order, error) {
 	query := `SELECT id, customer_id, item_name, amount, status, customer_email, created_at
               FROM orders

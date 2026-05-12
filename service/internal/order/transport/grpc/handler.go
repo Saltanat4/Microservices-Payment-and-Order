@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"AP2_assignment1/service/internal/order/repository"
+	"AP2_assignment1/service/internal/order/usecase"
 	"log"
 	"time"
 
@@ -14,16 +15,18 @@ import (
 type OrderGRPCHandler struct {
 	pb.UnimplementedOrderServiceServer
 	repo *repository.OrderRepo
+	uc   *usecase.OrderUsecase
 }
 
-func NewOrderGRPCHandler(repo *repository.OrderRepo) *OrderGRPCHandler {
-	return &OrderGRPCHandler{repo: repo}
+func NewOrderGRPCHandler(uc *usecase.OrderUsecase, repo *repository.OrderRepo) *OrderGRPCHandler {
+	return &OrderGRPCHandler{uc: uc,
+		repo: repo}
 }
 
 func (h *OrderGRPCHandler) SubscribeToOrderUpdates(req *pb.OrderRequest, stream pb.OrderService_SubscribeToOrderUpdatesServer) error {
 	orderID := req.OrderId
 
-	order, err := h.repo.GetByID(orderID)
+	order, err := h.uc.GetOrder(orderID)
 	if err != nil {
 		return status.Errorf(codes.NotFound, "order not found: %v", err)
 	}

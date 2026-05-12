@@ -14,6 +14,7 @@ type Config struct {
 	DBConn             string
 	PaymentGRPCAddress string `env:"ORDER_PAYMENT_GRPC_ADDRESS"`
 	RabbitMQURL        string
+	RedisAddr          string
 }
 
 func NewConfig() *Config {
@@ -30,6 +31,11 @@ func NewConfig() *Config {
 	rabbitURL := os.Getenv("RABBITMQ_URL")
 	if rabbitURL == "" {
 		rabbitURL = "amqp://guest:guest@localhost:5672/"
+	}
+
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "127.0.0.1:6379"
 	}
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
@@ -59,5 +65,6 @@ func NewConfig() *Config {
 		DBConn:             dsn,
 		PaymentGRPCAddress: paymentAddr,
 		RabbitMQURL:        rabbitURL,
+		RedisAddr:          redisAddr,
 	}
 }

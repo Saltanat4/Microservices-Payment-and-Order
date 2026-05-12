@@ -3,6 +3,8 @@ package usecase
 import (
 	"AP2_assignment1/service/internal/order/domain"
 	"AP2_assignment1/service/internal/order/repository"
+	"context"
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -61,7 +63,26 @@ func (uc *OrderUsecase) CreateOrder(customerID, itemName string, amount int64, c
 }
 
 func (uc *OrderUsecase) GetOrder(id string) (*domain.Order, error) {
-	return uc.repo.GetByID(id)
+	ctx := context.Background()
+	key := "order:" + id
+
+	val, err := repository.RDB.Get(ctx, key).Result()
+	if err == nil {
+		var order domain.Order
+		if err := json.Unmarshal([]byte(val), &order); err == nil {
+			return &order, nil
+		}
+	}
+
+	order, err := uc.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	data, _ := json.Marshal(order)
+	repository.RDB.Set(ctx, key, data, 5*time.Minute)
+
+	return order, nil
 }
 
 func (uc *OrderUsecase) CancelOrder(id string) error {
