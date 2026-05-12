@@ -62,6 +62,45 @@ The final phase introduces asynchronous processing and advanced messaging reliab
 
 ---
 
+### Assignment 4: Performance, Security & Distributed Caching
+*Focus: Infrastructure Resilience, Distributed Caching & Rate Limiting*
+
+The final evolution introduces Redis as a high-performance middleware layer to protect the system from traffic spikes and ensure message delivery guarantees.
+
+### Key Deliverables
+* **Distributed Rate Limiting:** Integrated Redis-based middleware to prevent API abuse (Limit: 10 requests/min per IP).
+
+* **Infrastructure-Level Idempotency:** Replaced in-memory tracking with a distributed Redis SetNX strategy for the Notification Service to handle duplicate events safely.
+
+* **Resilient Retry Mechanism:** Implemented exponential backoff for external integrations (Email Mock) to handle 20% simulated network failures.
+
+* **Enhanced Monitoring:** Structured logging for tracking message flow across RabbitMQ, Redis, and SMTP mocks.
+
+### Invalidation & Reliability Logic
+* **Rate Limiting Strategy:** Uses a Fixed Window algorithm in Redis.
+     * Every request triggers an INCR on a key tied to the Client IP. 
+     * If the counter exceeds the threshold, the system returns a 429 Too Many Requests.
+
+* **Idempotency Strategy:** The Notification Worker uses notified:<order_id> as a unique key in Redis. 
+  * Before processing, it executes SetNX (Set if Not Exists) with a 24-hour TTL. 
+  * If the key already exists, the message is acknowledged as a duplicate and ignored.
+
+* **Retry Logic and Trigger:** A simulated 20% chance of failure in the EmailSender mock.
+  * **Algorithm:** Custom backoff starting at 5s, increasing by 5s for each step (5s -> 10s -> 15s). 
+  * **Threshold:** After 3 failed attempts, the message is moved to the Dead Letter Queue (DLQ) via d.Nack(false, false).
+
+### WorkFlow (The Final Chain)
+1. **Request:** Client sends POST /orders. Redis Middleware checks IP rate limits. 
+2. **Order:** Order Service saves to orders_db and calls Payment Service via gRPC. 
+3. **Payment:** Payment Service validates and publishes a payment.completed event to RabbitMQ. 
+4. **Notification:**
+     * Worker consumes the message and checks Redis for duplicates. 
+     * If Amount == 101, the message is immediately routed to DLQ. 
+     * Otherwise, it attempts email delivery with a Retry loop for transient errors.
+5. Completion: Upon success, a fmt.Printf log confirms the final delivery details including the total amount
+
+---
+
 ## Infrastructure & Setup
 
 ### Prerequisites
@@ -83,18 +122,23 @@ ORDER_HTTP_PORT=8081
 ORDER_GRPC_PORT=50052
 PAYMENT_GRPC_ADDRESS=localhost:50051
 RABBITMQ_URL=amqp://guest:guest@localhost:5672/
-
 ```
 ---
-# SYSTEM Architecture
-![Diagram_A3.png](Diagram_A3.png)
+# System Architecture
+![Diagram_4.png](png/Diagram_4.png)
 
 --- 
-# Results
-* **Post_Orders:** ![POST_Orders.png](POST_Orders.png)
+# Demo Screenshoots
+* **Post_Orders:** ![POST_Orders.png](png/POST_Orders.png)
 
-* **Post_Orders (Amount Logic):**![POST_Orders_Amount_Logic.png](POST_Orders_Amount_Logic.png)
+* **Post_Orders (Amount Logic):**![POST_Orders_Amount_Logic.png](png/POST_Orders_Amount_Logic.png)
 
-* **Stream_Client:**![Stream_Client.png](Stream_Client.png)
+* **Stream_Client:**![Stream_Client.png](png/Stream_Client.png)
 
-* **WorkFlow:**![Workflow.png](Workflow.png)
+* **WorkFlow:**![Wo![retries.png](png/retries.png)rkflow.png](png/Workflow.png)
+* **Redis Rate Limit (429 Error):** ![429error.png](png/429error.png)
+* **Worker Retries & Success:**![retries.png](png/retries.png)
+* **Idempotency (Duplicate Ignored):**![duplicate.png](png/duplicate.png)
+
+* **RabbitMQ DashBoard (DLQ):**
+![RabbitMG DashBoard.png](png/RabbitMG%20DashBoard.png)
